@@ -61,7 +61,7 @@ namespace exqudens {
     auto testLambda2 = [] (int value) { return value; };
     std::future<int> testLambdaFuture = pool.submit(testLambda2, 123);
     std::future<int> testFunctionFuture = pool.submit(&testFunction2, 456);
-    std::future<int> testMethodFuture = pool.submit(std::bind(&TestObject::testMethod2, object, 789));
+    std::future<int> testMethodFuture = pool.submit(std::bind(&TestObject::testMethod2, object, std::placeholders::_1), 789);
     int testLambdaExpected = 123;
     int testFunctionExpected = 456;
     int testMethodExpected = 789;
