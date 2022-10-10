@@ -1,29 +1,21 @@
 #include "exqudens/ThreadPool.hpp"
 
+/* separator */
+
 namespace exqudens {
 
-  ThreadPool::ThreadPool(
-  ):
-      ThreadPool(
-          std::thread::hardware_concurrency()
-      )
-  {
+  ThreadPool::ThreadPool(): ThreadPool(
+      std::thread::hardware_concurrency()
+  ) {
   }
 
-  ThreadPool::ThreadPool(
-      size_t queueSize
-  ):
-      ThreadPool(
-          queueSize,
-          queueSize
-      )
-  {
+  ThreadPool::ThreadPool(size_t queueSize): ThreadPool(
+      queueSize,
+      queueSize
+  ) {
   }
 
-  ThreadPool::ThreadPool(
-      size_t queueSize,
-      size_t threadSize
-  ):
+  ThreadPool::ThreadPool(size_t queueSize, size_t threadSize):
       queueSize(queueSize),
       stop(false)
   {

@@ -11,11 +11,12 @@
 #include <stdexcept>
 #include <type_traits>
 
+#include "exqudens/ThreadsExport.hpp"
 #include "exqudens/Macros.hpp"
 
 namespace exqudens {
 
-  class ThreadPool {
+  class EXQUDENS_THREADS_EXPORT ThreadPool {
 
     private:
 
@@ -30,14 +31,9 @@ namespace exqudens {
 
       ThreadPool();
 
-      explicit ThreadPool(
-          size_t queueSize
-      );
+      explicit ThreadPool(size_t queueSize);
 
-      ThreadPool(
-          size_t queueSize,
-          size_t threadSize
-      );
+      ThreadPool(size_t queueSize,size_t threadSize);
 
       template<class F, class... ARGS>
       auto submit(F&& f, ARGS&&... args) -> std::future<typename std::invoke_result<F, ARGS...>::type>;
