@@ -1,7 +1,5 @@
 #include "exqudens/ThreadPool.hpp"
 
-/* separator */
-
 namespace exqudens {
 
   ThreadPool::ThreadPool(): ThreadPool(
