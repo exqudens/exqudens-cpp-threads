@@ -107,9 +107,9 @@ if("${INTERFACE_ONLY}")
             get_filename_component(source_file_dir "${source}" DIRECTORY)
             get_filename_component(source_file_name "${source}" NAME_WE)
             if("${header_file_dir}" STREQUAL "${source_file_dir}" AND "${header_file_name}" STREQUAL "${source_file_name}")
-                if(NOT "${header}" IN_LIST filtered_header_files)
-                    list(APPEND filtered_header_files "${header}")
-                    list(APPEND filtered_source_files "${source}")
+                if(NOT "${header}" IN_LIST paired_header_files)
+                    list(APPEND paired_header_files "${header}")
+                    list(APPEND paired_source_files "${source}")
                 endif()
             else()
                 if(NOT "${header}" IN_LIST single_header_files)
@@ -122,10 +122,13 @@ if("${INTERFACE_ONLY}")
         cmake_path(RELATIVE_PATH header BASE_DIRECTORY "${PROJECT_SOURCE_DIR}" OUTPUT_VARIABLE new_header_relative_path)
         get_filename_component(new_header_relative_dir "${new_header_relative_path}" DIRECTORY)
         set(new_header_dir "${PROJECT_BINARY_DIR}/generated/${new_header_relative_dir}")
+
         file(MAKE_DIRECTORY "${new_header_dir}")
         file(COPY "${header}" DESTINATION "${new_header_dir}")
+
+        list(APPEND GENERATED_SOURCES "${new_header_relative_path}")
     endforeach()
-    foreach(header source IN ZIP_LISTS filtered_header_files filtered_source_files)
+    foreach(header source IN ZIP_LISTS paired_header_files paired_source_files)
         file(READ "${header}" header_content)
         file(READ "${source}" source_content)
 
@@ -144,14 +147,14 @@ if("${INTERFACE_ONLY}")
         set(new_header_path "${PROJECT_BINARY_DIR}/generated/src/main/cpp/${new_header_path}")
         get_filename_component(new_header_dir "${new_header_path}" DIRECTORY)
         cmake_path(RELATIVE_PATH new_header_path BASE_DIRECTORY "${PROJECT_SOURCE_DIR}" OUTPUT_VARIABLE new_header_relative_path)
-        list(APPEND GENERATED_SOURCES "${new_header_relative_path}")
 
         file(MAKE_DIRECTORY "${new_header_dir}")
         file(WRITE "${new_header_path}" "${new_header_content}")
+
+        list(APPEND GENERATED_SOURCES "${new_header_relative_path}")
     endforeach()
 
     add_library("${PROJECT_NAME}" INTERFACE
-        "src/main/cpp/exqudens/Macros.hpp"
         ${GENERATED_SOURCES}
     )
     file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/generated/src/main/cpp/exqudens")
