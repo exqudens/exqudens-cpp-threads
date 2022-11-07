@@ -100,6 +100,8 @@ endif()
 if("${INTERFACE_ONLY}")
     file(GLOB_RECURSE header_files "${CMAKE_CURRENT_SOURCE_DIR}/src/main/cpp/**/*.hpp")
     file(GLOB_RECURSE source_files "${CMAKE_CURRENT_SOURCE_DIR}/src/main/cpp/**/*.cpp")
+    list(SORT header_files)
+    list(SORT source_files)
     foreach(header ${header_files})
         set(single_header "TRUE")
         get_filename_component(header_file_dir "${header}" DIRECTORY)
@@ -139,6 +141,7 @@ if("${INTERFACE_ONLY}")
         string(STRIP "${header_content}" header_content)
         string(STRIP "${source_part_1}" source_part_1)
         string(STRIP "${source_part_2}" source_part_2)
+        set(new_header_content "")
         string(APPEND new_header_content "${header_content}" "\n" "\n")
         if(NOT "" STREQUAL "${source_part_1}")
             string(APPEND new_header_content "${source_part_1}" "\n" "\n")
@@ -159,7 +162,23 @@ if("${INTERFACE_ONLY}")
         ${GENERATED_SOURCES}
     )
     file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/generated/src/main/cpp/exqudens")
-    file(WRITE "${PROJECT_BINARY_DIR}/generated/src/main/cpp/exqudens/ThreadsExport.hpp" "#define EXQUDENS_THREADS_EXPORT\n")
+    string(CONCAT EXQUDENS_THREADS_INTERFACE_INLINE_CONTENT
+        "#ifndef EXQUDENS_THREADS_INTERFACE_INLINE\n"
+        "#  define EXQUDENS_THREADS_INTERFACE_INLINE inline\n"
+        "#endif /* EXQUDENS_THREADS_INTERFACE_INLINE */\n"
+    )
+    file(WRITE "${PROJECT_BINARY_DIR}/generated/src/main/cpp/exqudens/ThreadsExport.hpp"
+        "#ifndef EXQUDENS_THREADS_EXPORT_H\n"
+        "#define EXQUDENS_THREADS_EXPORT_H\n"
+        "\n"
+        "#ifndef EXQUDENS_THREADS_EXPORT\n"
+        "#  define EXQUDENS_THREADS_EXPORT\n"
+        "#endif /* EXQUDENS_THREADS_EXPORT */\n"
+        "\n"
+        "${EXQUDENS_THREADS_INTERFACE_INLINE_CONTENT}"
+        "\n"
+        "#endif /* EXQUDENS_THREADS_EXPORT_H */\n"
+    )
     target_include_directories("${PROJECT_NAME}" INTERFACE
         "$<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/generated/src/main/cpp>"
         "$<INSTALL_INTERFACE:include>"
@@ -170,8 +189,15 @@ else()
         "src/main/cpp/exqudens/ThreadPool.hpp"
         "src/main/cpp/exqudens/ThreadPool.cpp"
     )
-    generate_export_header("${PROJECT_NAME}" BASE_NAME "EXQUDENS_THREADS" EXPORT_FILE_NAME
-        "generated/src/main/cpp/exqudens/ThreadsExport.hpp"
+    string(CONCAT EXQUDENS_THREADS_INTERFACE_INLINE_CONTENT
+        "#ifndef EXQUDENS_THREADS_INTERFACE_INLINE\n"
+        "#  define EXQUDENS_THREADS_INTERFACE_INLINE inline\n"
+        "#endif /* EXQUDENS_THREADS_INTERFACE_INLINE */\n"
+    )
+    generate_export_header("${PROJECT_NAME}"
+        BASE_NAME "EXQUDENS_THREADS"
+        EXPORT_FILE_NAME "generated/src/main/cpp/exqudens/ThreadsExport.hpp"
+        CUSTOM_CONTENT_FROM_VARIABLE "EXQUDENS_THREADS_INTERFACE_INLINE_CONTENT"
     )
     if(NOT "${BUILD_SHARED_LIBS}")
         set_target_properties("${PROJECT_NAME}" PROPERTIES COMPILE_FLAGS -DEXQUDENS_THREADS_STATIC_DEFINE)
