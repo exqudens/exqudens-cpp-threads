@@ -10,19 +10,95 @@ project("${NAME}" VERSION "${VERSION}" LANGUAGES "NONE")
 message("project: '${PROJECT_NAME}-${PROJECT_VERSION}'")
 
 include("util.cmake")
-include("config.cmake")
 include("GenerateExportHeader")
 enable_testing()
 include(GoogleTest)
 
+if("$ENV{CLION_IDE}")
+    cmake_path(CONVERT "$ENV{PATH}" TO_CMAKE_PATH_LIST TMP_CMAKE_ENV_PATH NORMALIZE)
+    list(REMOVE_AT TMP_CMAKE_ENV_PATH 0)
+    cmake_path(CONVERT "${TMP_CMAKE_ENV_PATH}" TO_NATIVE_PATH_LIST TMP_NATIVE_ENV_PATH NORMALIZE)
+    set("ENV{PATH}" "${TMP_NATIVE_ENV_PATH}")
+endif()
+
+find_program(CONAN_COMMAND NAMES "conan.exe" "conan" REQUIRED)
+find_program(DOXYGEN_COMMAND NAMES "doxygen.exe" "doxygen" REQUIRED)
+
+enable_language("C")
+enable_language("CXX")
+
+set(CMAKE_OBJECT_PATH_MAX 1000)
+set(CMAKE_SHARED_LIBRARY_PREFIX "")
+set(CMAKE_SHARED_MODULE_PREFIX "")
+set(CMAKE_STATIC_LIBRARY_PREFIX "")
+set(CMAKE_IMPORT_LIBRARY_PREFIX "")
+set(CMAKE_STAGING_PREFIX "")
+set(CMAKE_FIND_LIBRARY_PREFIXES "")
+set(CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH FALSE)
+set(CMAKE_FIND_USE_CMAKE_SYSTEM_PATH FALSE)
+set(CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH TRUE)
+set(CMAKE_FIND_USE_SYSTEM_PACKAGE_REGISTRY FALSE)
+set(CMAKE_FIND_USE_PACKAGE_REGISTRY FALSE)
+set(CMAKE_FIND_USE_PACKAGE_ROOT_PATH FALSE)
+set(CMAKE_FIND_USE_CMAKE_PATH TRUE)
+set(CMAKE_FIND_PACKAGE_PREFER_CONFIG FALSE)
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS FALSE)
+set(CMAKE_CXX_VISIBILITY_PRESET "hidden")
+set(CMAKE_VISIBILITY_INLINES_HIDDEN TRUE)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+
+if("${CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT}")
+    set(CMAKE_INSTALL_PREFIX "${PROJECT_BINARY_DIR}/cmake-install" CACHE PATH "..." FORCE)
+endif()
+
+separate_arguments(CMAKE_CXX_FLAGS NATIVE_COMMAND "${CMAKE_CXX_FLAGS}")
+if(MSVC)
+    if(NOT "/EHa" IN_LIST CMAKE_CXX_FLAGS AND "/EHsc" IN_LIST CMAKE_CXX_FLAGS)
+        list(REMOVE_ITEM CMAKE_CXX_FLAGS "/EHsc")
+        list(APPEND CMAKE_CXX_FLAGS "/EHa")
+    endif()
+endif()
+string(JOIN " " CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+
+if("" STREQUAL "${CMAKE_MSVC_RUNTIME_LIBRARY}")
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
+endif()
+
+if("${BUILD_SHARED_LIBS}")
+    set(CONAN_RELEASE_COMPILER_RUNTIME "MD")
+else()
+    set(CONAN_RELEASE_COMPILER_RUNTIME "MT")
+    if("${MINGW}")
+        set(CMAKE_CXX_STANDARD_LIBRARIES "-static-libgcc -static-libstdc++ ${CMAKE_CXX_STANDARD_LIBRARIES}")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-Bstatic,--whole-archive -lwinpthread -Wl,--no-whole-archive")
+    endif()
+endif()
+
+set(CMAKE_VERBOSE_MAKEFILE TRUE CACHE BOOL "" FORCE)
+set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE CACHE BOOL "" FORCE)
+
+set(TARGET_CMAKE_INSTALL_DEPENDS_ON "cmake-test")
+option(SKIP_CMAKE_TEST "..." FALSE)
+if(${SKIP_CMAKE_TEST})
+    set(TARGET_CMAKE_INSTALL_DEPENDS_ON "${PROJECT_NAME}")
+endif()
+
+set_conan_architecture(CONAN_ARCH "${CMAKE_SYSTEM_PROCESSOR}")
+set_conan_compiler(CONAN_COMPILER "${CMAKE_CXX_COMPILER_ID}")
+set_conan_compiler_version(CONAN_COMPILER_VERSION "${CMAKE_CXX_COMPILER_ID}" "${CMAKE_CXX_COMPILER_VERSION}")
+set_conan_compiler_runtime(CONAN_COMPILER_RUNTIME "${CMAKE_MSVC_RUNTIME_LIBRARY}")
+
+set_python_boolean(CONAN_INTERFACE_ONLY "${INTERFACE_ONLY}")
+set_python_boolean(CONAN_BUILD_SHARED_LIBS "${BUILD_SHARED_LIBS}")
+
 set_conan_settings(CONAN_SETTINGS
-    "${CMAKE_SYSTEM_NAME}"
-    "${CMAKE_SYSTEM_PROCESSOR}"
-    "${CMAKE_CXX_COMPILER_ID}"
-    "${CMAKE_CXX_COMPILER_VERSION}"
-    "${CMAKE_MSVC_RUNTIME_LIBRARY}"
-    "${CMAKE_CXX_STANDARD}"
-    "${CMAKE_BUILD_TYPE}"
+    "arch=${CONAN_ARCH}"
+    "os=${CMAKE_SYSTEM_NAME}"
+    "compiler=${CONAN_COMPILER}"
+    "compiler.version=${CONAN_COMPILER_VERSION}"
+    "compiler.runtime=${CONAN_COMPILER_RUNTIME}"
+    "build_type=${CMAKE_BUILD_TYPE}"
 )
 set_conan_options(CONAN_OPTIONS
     "interface=${CONAN_INTERFACE_ONLY}"
@@ -135,8 +211,8 @@ if("${INTERFACE_ONLY}")
         file(READ "${header}" header_content)
         file(READ "${source}" source_content)
 
-        string_substring_between(source_part_1 "${source_content}" "\n" "namespace ")
-        string_substring_from(source_part_2 "${source_content}" "namespace ")
+        string_replace_between(source_part_1 "${source_content}" "\n" "namespace " BETWEEN_ONLY)
+        substring_from(source_part_2 "${source_content}" "namespace ")
         string(PREPEND source_part_2 "namespace ")
         string(STRIP "${header_content}" header_content)
         string(STRIP "${source_part_1}" source_part_1)

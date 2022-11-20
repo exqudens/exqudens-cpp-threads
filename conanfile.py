@@ -14,7 +14,7 @@ class ConanConfiguration(ConanFile):
     requires = []
     settings = "arch", "os", "compiler", "build_type"
     options = {"interface": [True, False], "shared": [True, False]}
-    default_options = {"interface": False, "shared": False}
+    default_options = {"interface": False, "shared": True}
     generators = "cmake_find_package"
 
     def set_name(self):
