@@ -174,65 +174,13 @@ if(NOT "" STREQUAL "${NOT_FOUND_PACKAGE_NAMES}")
 endif()
 
 if("${INTERFACE_ONLY}")
-    file(GLOB_RECURSE header_files "${CMAKE_CURRENT_SOURCE_DIR}/src/main/cpp/**/*.hpp")
-    file(GLOB_RECURSE source_files "${CMAKE_CURRENT_SOURCE_DIR}/src/main/cpp/**/*.cpp")
-    list(SORT header_files)
-    list(SORT source_files)
-    foreach(header ${header_files})
-        set(single_header "TRUE")
-        get_filename_component(header_file_dir "${header}" DIRECTORY)
-        get_filename_component(header_file_name "${header}" NAME_WE)
-        foreach(source ${source_files})
-            get_filename_component(source_file_dir "${source}" DIRECTORY)
-            get_filename_component(source_file_name "${source}" NAME_WE)
-            if("${header_file_dir}" STREQUAL "${source_file_dir}" AND "${header_file_name}" STREQUAL "${source_file_name}")
-                set(single_header "FALSE")
-                if(NOT "${header}" IN_LIST paired_header_files)
-                    list(APPEND paired_header_files "${header}")
-                    list(APPEND paired_source_files "${source}")
-                endif()
-            endif()
-        endforeach()
-        if("${single_header}" AND NOT "${header}" IN_LIST single_header_files)
-            list(APPEND single_header_files "${header}")
-        endif()
-    endforeach()
-    foreach(header ${single_header_files})
-        cmake_path(RELATIVE_PATH header BASE_DIRECTORY "${PROJECT_SOURCE_DIR}" OUTPUT_VARIABLE new_header_relative_path)
-        get_filename_component(new_header_relative_dir "${new_header_relative_path}" DIRECTORY)
-        set(new_header_dir "${PROJECT_BINARY_DIR}/generated/${new_header_relative_dir}")
-
-        file(MAKE_DIRECTORY "${new_header_dir}")
-        file(COPY "${header}" DESTINATION "${new_header_dir}")
-
-        list(APPEND GENERATED_SOURCES "${new_header_relative_path}")
-    endforeach()
-    foreach(header source IN ZIP_LISTS paired_header_files paired_source_files)
-        file(READ "${header}" header_content)
-        file(READ "${source}" source_content)
-
-        string_replace_between(source_part_1 "${source_content}" "\n" "namespace " BETWEEN_ONLY)
-        substring_from(source_part_2 "${source_content}" "namespace ")
-        string(PREPEND source_part_2 "namespace ")
-        string(STRIP "${header_content}" header_content)
-        string(STRIP "${source_part_1}" source_part_1)
-        string(STRIP "${source_part_2}" source_part_2)
-        set(new_header_content "")
-        string(APPEND new_header_content "${header_content}" "\n" "\n")
-        if(NOT "" STREQUAL "${source_part_1}")
-            string(APPEND new_header_content "${source_part_1}" "\n" "\n")
-        endif()
-        string(APPEND new_header_content "${source_part_2}" "\n")
-        cmake_path(RELATIVE_PATH header BASE_DIRECTORY "${PROJECT_SOURCE_DIR}/src/main/cpp" OUTPUT_VARIABLE new_header_path)
-        set(new_header_path "${PROJECT_BINARY_DIR}/generated/src/main/cpp/${new_header_path}")
-        get_filename_component(new_header_dir "${new_header_path}" DIRECTORY)
-        cmake_path(RELATIVE_PATH new_header_path BASE_DIRECTORY "${PROJECT_SOURCE_DIR}" OUTPUT_VARIABLE new_header_relative_path)
-
-        file(MAKE_DIRECTORY "${new_header_dir}")
-        file(WRITE "${new_header_path}" "${new_header_content}")
-
-        list(APPEND GENERATED_SOURCES "${new_header_relative_path}")
-    endforeach()
+    generate_interface_only_files(GENERATED_SOURCES
+        SRC_DIRECTORY "${PROJECT_SOURCE_DIR}"
+        SRC_BASE_DIRECTORY "${PROJECT_SOURCE_DIR}/src/main/cpp"
+        DST_BASE_DIRECTORY "${PROJECT_BINARY_DIR}/generated/src/main/cpp"
+        HEADER_FILES_EXPRESSION "**/*.hpp"
+        SOURCE_FILES_EXPRESSION "**/*.cpp"
+    )
 
     add_library("${PROJECT_NAME}" INTERFACE
         ${GENERATED_SOURCES}

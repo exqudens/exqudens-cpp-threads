@@ -844,6 +844,119 @@ function(set_target_names var dir)
     set(${var} "${targets}" PARENT_SCOPE)
 endfunction()
 
+function(generate_interface_only_files var)
+    foreach(i var)
+        if("" STREQUAL "${${i}}")
+            message(FATAL_ERROR "Empty value not supported for '${i}'.")
+        endif()
+    endforeach()
+
+    set(options)
+    set(oneValueKeywords
+        "SRC_DIRECTORY"
+        "SRC_BASE_DIRECTORY"
+        "DST_BASE_DIRECTORY"
+        "HEADER_FILES_EXPRESSION"
+        "SOURCE_FILES_EXPRESSION"
+    )
+    set(multiValueKeywords)
+    cmake_parse_arguments("generate_interface_only_files" "${options}" "${oneValueKeywords}" "${multiValueKeywords}" "${ARGN}")
+
+    set(srcDirectory "${generate_interface_only_files_SRC_DIRECTORY}")
+    set(srcBaseDirectory "${generate_interface_only_files_SRC_BASE_DIRECTORY}")
+    set(dstBaseDirectory "${generate_interface_only_files_DST_BASE_DIRECTORY}")
+    set(headerFilesExpression "${generate_interface_only_files_HEADER_FILES_EXPRESSION}")
+    set(sourceFilesExpression "${generate_interface_only_files_SOURCE_FILES_EXPRESSION}")
+
+    if(
+        "${srcDirectory}" STREQUAL ""
+        OR "${srcBaseDirectory}" STREQUAL ""
+        OR "${dstBaseDirectory}" STREQUAL ""
+        OR "${headerFilesExpression}" STREQUAL ""
+        OR "${sourceFilesExpression}" STREQUAL ""
+    )
+        string(JOIN " " message
+            "Invalid set of arguments:"
+            "srcDirectory: '${srcDirectory}'"
+            "srcBaseDirectory: '${srcBaseDirectory}'"
+            "dstBaseDirectory: '${dstBaseDirectory}'"
+            "headerFilesExpression: '${headerFilesExpression}'"
+            "sourceFilesExpression: '${sourceFilesExpression}'"
+        )
+        message(FATAL_ERROR "${message}")
+    endif()
+
+    cmake_path(RELATIVE_PATH dstBaseDirectory BASE_DIRECTORY "${srcDirectory}" OUTPUT_VARIABLE dstRelativePath)
+
+    file(GLOB_RECURSE headerFiles "${srcBaseDirectory}/${headerFilesExpression}")
+    file(GLOB_RECURSE sourceFiles "${srcBaseDirectory}/${sourceFilesExpression}")
+
+    list(SORT headerFiles)
+    list(SORT sourceFiles)
+    set(singleHeaderFiles "")
+    set(pairedHeaderFiles "")
+    set(pairedSourceFiles "")
+    set(result "")
+    foreach(header ${headerFiles})
+        set(singleHeader "TRUE")
+        get_filename_component(headerFileDir "${header}" DIRECTORY)
+        get_filename_component(headerFileName "${header}" NAME_WE)
+        foreach(source ${sourceFiles})
+            get_filename_component(sourceFileDir "${source}" DIRECTORY)
+            get_filename_component(sourceFileName "${source}" NAME_WE)
+            if("${headerFileDir}" STREQUAL "${sourceFileDir}" AND "${headerFileName}" STREQUAL "${sourceFileName}")
+                set(singleHeader "FALSE")
+                if(NOT "${header}" IN_LIST pairedHeaderFiles)
+                    list(APPEND pairedHeaderFiles "${header}")
+                    list(APPEND pairedSourceFiles "${source}")
+                endif()
+            endif()
+        endforeach()
+        if("${singleHeader}" AND NOT "${header}" IN_LIST singleHeaderFiles)
+            list(APPEND singleHeaderFiles "${header}")
+        endif()
+    endforeach()
+    foreach(header ${singleHeaderFiles})
+        cmake_path(RELATIVE_PATH header BASE_DIRECTORY "${srcBaseDirectory}" OUTPUT_VARIABLE newHeaderRelativePath)
+        get_filename_component(newHeaderRelativeDir "${newHeaderRelativePath}" DIRECTORY)
+        set(newHeaderDir "${dstBaseDirectory}/${newHeaderRelativeDir}")
+
+        file(COPY "${header}" DESTINATION "${newHeaderDir}")
+
+        if(NOT "${dstRelativePath}/${newHeaderRelativePath}" IN_LIST result)
+            list(APPEND result "${dstRelativePath}/${newHeaderRelativePath}")
+        endif()
+    endforeach()
+    foreach(header source IN ZIP_LISTS pairedHeaderFiles pairedSourceFiles)
+        file(READ "${header}" headerContent)
+        file(READ "${source}" sourceContent)
+
+        string_replace_between(sourcePart1 "${sourceContent}" "\n" "namespace " BETWEEN_ONLY)
+        substring_from(sourcePart2 "${sourceContent}" "namespace ")
+        string(PREPEND sourcePart2 "namespace ")
+        string(STRIP "${headerContent}" headerContent)
+        string(STRIP "${sourcePart1}" sourcePart1)
+        string(STRIP "${sourcePart2}" sourcePart2)
+        set(newHeaderContent "")
+        string(APPEND newHeaderContent "${headerContent}" "\n" "\n")
+        if(NOT "" STREQUAL "${sourcePart1}")
+            string(APPEND newHeaderContent "${sourcePart1}" "\n" "\n")
+        endif()
+        string(APPEND newHeaderContent "${sourcePart2}" "\n")
+        cmake_path(RELATIVE_PATH header BASE_DIRECTORY "${srcBaseDirectory}" OUTPUT_VARIABLE newHeaderPath)
+        set(newHeaderPath "${dstBaseDirectory}/${newHeaderPath}")
+        cmake_path(RELATIVE_PATH newHeaderPath BASE_DIRECTORY "${srcDirectory}" OUTPUT_VARIABLE newHeaderRelativePath)
+
+        file(WRITE "${newHeaderPath}" "${newHeaderContent}")
+
+        if(NOT "${newHeaderRelativePath}" IN_LIST result)
+            list(APPEND result "${newHeaderRelativePath}")
+        endif()
+    endforeach()
+
+    set("${var}" "${result}" PARENT_SCOPE)
+endfunction()
+
 function(execute_script)
     set(options
         "help"
