@@ -16,6 +16,11 @@
 
 namespace exqudens {
 
+  /*!
+
+    @brief Class ThreadPool test doc.
+
+  */
   class EXQUDENS_THREADS_EXPORT ThreadPool {
 
     private:
@@ -35,6 +40,11 @@ namespace exqudens {
 
       ThreadPool(size_t queueSize,size_t threadSize);
 
+      /*!
+
+        @brief Method ThreadPool::submit test doc.
+
+      */
       template<class F, class... ARGS>
       auto submit(F&& f, ARGS&&... args) -> std::future<typename std::invoke_result<F, ARGS...>::type>;
 

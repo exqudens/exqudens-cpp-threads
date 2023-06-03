@@ -37,6 +37,11 @@ namespace exqudens {
 
   };
 
+  /*!
+
+    @brief Macro Tests::test1 test doc.
+
+  */
   TEST(Tests, test1) {
     ThreadPool pool(3);
     TestObject object;

@@ -1,10 +1,10 @@
-PROJECT_NAME     = "exqudens-cpp-bytes"
-OUTPUT_DIRECTORY = "build/doxygen"
+PROJECT_NAME     = "exqudens-cpp-threads"
+OUTPUT_DIRECTORY = "build/doxygen/main"
 RECURSIVE        = YES
 INPUT            = "src/main/cpp"
 FILE_PATTERNS    = *.hpp, *.cpp
 GENERATE_XML     = YES
-GENERATE_HTML    = YES
-GENERATE_LATEX   = YES
-USE_PDFLATEX     = YES
-PDF_HYPERLINKS   = YES
+GENERATE_HTML    = NO
+GENERATE_LATEX   = NO
+USE_PDFLATEX     = NO
+PDF_HYPERLINKS   = NO

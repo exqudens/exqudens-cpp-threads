@@ -1,4 +1,51 @@
-cmake_minimum_required(VERSION 3.21 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.25 FATAL_ERROR)
+
+block()
+    set(fileName "util.cmake")
+    if(NOT EXISTS "${CMAKE_CURRENT_BINARY_DIR}/../common/${fileName}")
+        file(REMOVE "${CMAKE_CURRENT_BINARY_DIR}/tmp/${fileName}")
+        file(DOWNLOAD
+            "https://raw.githubusercontent.com/exqudens/exqudens-cmake/master/src/main/cmake/${fileName}"
+            "${CMAKE_CURRENT_BINARY_DIR}/tmp/${fileName}"
+            EXPECTED_MD5 "3ed544e138fcaa4dd18a6b20413070af"
+            STATUS downloadStatus
+        )
+        if("${downloadStatus}" STREQUAL "0;\"No error\"")
+            file(COPY "${CMAKE_CURRENT_BINARY_DIR}/tmp/${fileName}" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/../common")
+        else()
+            message(FATAL_ERROR "downloadStatus: '${downloadStatus}'")
+        endif()
+    endif()
+endblock()
+
+include("${CMAKE_CURRENT_BINARY_DIR}/../common/util.cmake")
+
+string(REPLACE "." ";" PRESET_NAME_ELEMENTS "${PRESET_NAME}")
+if("msvc-16-x64-x64" IN_LIST "PRESET_NAME_ELEMENTS")
+    if(NOT EXISTS "${CMAKE_CURRENT_BINARY_DIR}/../common/msvc-16-x64-x64-toolchain.cmake")
+        set_msvc_toolchain_content(TOOLCHAIN_CONTENT
+            PROCESSOR "x86_64"
+            OS "${CMAKE_HOST_SYSTEM_NAME}"
+            VERSION "16"
+            HOST "x64"
+            TARGET "x64"
+        )
+        file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/../common/msvc-16-x64-x64-toolchain.cmake" "${TOOLCHAIN_CONTENT}")
+    endif()
+    find_program(CONAN_COMMAND NAMES "conan.exe" PATHS ENV CONAN_PATH ENV PATH REQUIRED NO_CACHE NO_DEFAULT_PATH)
+elseif("gcc" IN_LIST PRESET_NAME_ELEMENTS)
+    if(NOT EXISTS "${CMAKE_CURRENT_BINARY_DIR}/../common/gcc-toolchain.cmake")
+        find_file(COMPILER_PATH NAMES "gcc" PATHS ENV GCC_PATH ENV PATH REQUIRED NO_CACHE NO_DEFAULT_PATH)
+        set_gnu_toolchain_content(TOOLCHAIN_CONTENT
+            PROCESSOR "x86_64"
+            OS "${CMAKE_HOST_SYSTEM_NAME}"
+            PATH "${COMPILER_PATH}"
+        )
+        file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/../common/gcc-toolchain.cmake" "${TOOLCHAIN_CONTENT}")
+    endif()
+    find_program(CONAN_COMMAND NAMES "conan" PATHS ENV CONAN_PATH ENV PATH REQUIRED NO_CACHE NO_DEFAULT_PATH)
+endif()
+
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/name-version.txt" INFO)
 string(REPLACE ":" ";" INFO_LIST "${INFO}")
 list(GET INFO_LIST 0 RAW_NAME)
@@ -9,7 +56,6 @@ project("${NAME}" VERSION "${VERSION}" LANGUAGES "NONE")
 
 message("project: '${PROJECT_NAME}-${PROJECT_VERSION}'")
 
-include("util.cmake")
 include("GenerateExportHeader")
 enable_testing()
 include(GoogleTest)
@@ -33,7 +79,7 @@ set(CMAKE_SHARED_MODULE_PREFIX "")
 set(CMAKE_STATIC_LIBRARY_PREFIX "")
 set(CMAKE_IMPORT_LIBRARY_PREFIX "")
 set(CMAKE_STAGING_PREFIX "")
-set(CMAKE_FIND_LIBRARY_PREFIXES "")
+set(CMAKE_FIND_LIBRARY_PREFIXES "" "lib")
 set(CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH FALSE)
 set(CMAKE_FIND_USE_CMAKE_SYSTEM_PATH FALSE)
 set(CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH TRUE)
