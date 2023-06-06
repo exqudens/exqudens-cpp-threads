@@ -7,7 +7,7 @@ block()
         file(DOWNLOAD
             "https://raw.githubusercontent.com/exqudens/exqudens-cmake/master/src/main/cmake/${fileName}"
             "${CMAKE_CURRENT_BINARY_DIR}/tmp/${fileName}"
-            EXPECTED_MD5 "3ed544e138fcaa4dd18a6b20413070af"
+            EXPECTED_MD5 "39b926a55f3934600e31fea9cbc9175a"
             STATUS downloadStatus
         )
         if("${downloadStatus}" STREQUAL "0;\"No error\"")
@@ -29,6 +29,7 @@ if("msvc-16-x64-x64" IN_LIST "PRESET_NAME_ELEMENTS")
             VERSION "16"
             HOST "x64"
             TARGET "x64"
+            NO_CACHE "FALSE"
         )
         file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/../common/msvc-16-x64-x64-toolchain.cmake" "${TOOLCHAIN_CONTENT}")
     endif()
@@ -40,6 +41,7 @@ elseif("gcc" IN_LIST PRESET_NAME_ELEMENTS)
             PROCESSOR "x86_64"
             OS "${CMAKE_HOST_SYSTEM_NAME}"
             PATH "${COMPILER_PATH}"
+            NO_CACHE "FALSE"
         )
         file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/../common/gcc-toolchain.cmake" "${TOOLCHAIN_CONTENT}")
     endif()
