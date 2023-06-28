@@ -23,8 +23,8 @@ rst_prolog = '.. |project| replace:: ' + project
 
 extensions = [
     'linuxdoc.rstFlatTable',
-    'mlx.traceability',
     'breathe',
+    'mlx.traceability',
     'docxbuilder',
     'rst2pdf.pdfbuilder'
 ]

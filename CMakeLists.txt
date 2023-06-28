@@ -403,12 +403,14 @@ if("${BUILD_SHARED_LIBS}")
         COMMAND "${CMAKE_COMMAND}" -E copy_directory "$<TARGET_PROPERTY:${PROJECT_NAME},RUNTIME_OUTPUT_DIRECTORY>" "$<TARGET_PROPERTY:test-app,RUNTIME_OUTPUT_DIRECTORY>"
         COMMAND "${CMAKE_COMMAND}" -E copy_directory "${CONAN_INSTALL_PREFIX}/bin" "$<TARGET_PROPERTY:test-app,RUNTIME_OUTPUT_DIRECTORY>"
         VERBATIM
+        USES_TERMINAL
     )
 endif()
 
 gtest_discover_tests("test-app"
     WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/test/bin"
     PROPERTIES ENVIRONMENT "PARENT_PATH=;PATH="
+    XML_OUTPUT_DIR "${PROJECT_BINARY_DIR}/test/report/xml"
 )
 
 add_custom_target("cmake-test"
@@ -416,6 +418,7 @@ add_custom_target("cmake-test"
     DEPENDS "test-app"
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
     VERBATIM
+    USES_TERMINAL
 )
 
 add_custom_target("cmake-install" ALL
@@ -423,6 +426,7 @@ add_custom_target("cmake-install" ALL
     DEPENDS ${TARGET_CMAKE_INSTALL_DEPENDS_ON}
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
     VERBATIM
+    USES_TERMINAL
 )
 
 add_custom_target("conan-export"
@@ -438,4 +442,19 @@ add_custom_target("conan-export"
     DEPENDS "cmake-install"
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
     VERBATIM
+    USES_TERMINAL
+)
+
+add_custom_target("cmake-doc"
+    COMMAND "${CMAKE_COMMAND}"
+            "-P"
+            "cmake/run-sphinx.cmake"
+            "--"
+            "VERBOSE" "true"
+            "BUILD_DIR" "${PROJECT_BINARY_DIR}"
+            "EXTRA_FILES" "${PROJECT_BINARY_DIR}/test/report/xml/Tests.test3.xml"
+    DEPENDS "cmake-test"
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+    VERBATIM
+    USES_TERMINAL
 )

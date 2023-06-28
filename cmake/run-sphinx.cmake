@@ -26,6 +26,7 @@ function(execute_script args)
     )
     set(multiValueKeywords
         "FILES"
+        "EXTRA_FILES"
         "BUILDERS"
     )
 
@@ -68,7 +69,7 @@ function(execute_script args)
     if("${${currentFunctionName}_BUILD_DIR}" STREQUAL "")
         set(buildDirRelative "build")
     else()
-        set(buildDirRelative "${${currentFunctionName}_BUILD_DIR}")
+        cmake_path(RELATIVE_PATH "${currentFunctionName}_BUILD_DIR" BASE_DIRECTORY "${projectDir}" OUTPUT_VARIABLE buildDirRelative)
         cmake_path(APPEND buildDirRelative "DIR")
         cmake_path(GET "buildDirRelative" PARENT_PATH buildDirRelative)
     endif()
@@ -76,7 +77,7 @@ function(execute_script args)
     if("${${currentFunctionName}_OUTPUT_DIR}" STREQUAL "")
         set(outputDirRelative "build/doc")
     else()
-        set(outputDirRelative "${${currentFunctionName}_OUTPUT_DIR}")
+        cmake_path(RELATIVE_PATH "${currentFunctionName}_OUTPUT_DIR" BASE_DIRECTORY "${projectDir}" OUTPUT_VARIABLE outputDirRelative)
         cmake_path(APPEND outputDirRelative "DIR")
         cmake_path(GET "outputDirRelative" PARENT_PATH outputDirRelative)
     endif()
@@ -94,6 +95,7 @@ function(execute_script args)
             "traceability/user-requirements.rst"
             "traceability/system-tests.rst"
             "traceability/matrix.rst"
+            "test-report/index.rst"
         )
     else()
         set(files "")
@@ -106,6 +108,16 @@ function(execute_script args)
             else()
                 list(APPEND files "${fileDir}/${fileName}")
             endif()
+        endforeach()
+    endif()
+
+    if("${${currentFunctionName}_EXTRA_FILES}" STREQUAL "")
+        set(extraFiles "")
+    else()
+        set(extraFiles "")
+        foreach(file IN LISTS "${currentFunctionName}_EXTRA_FILES")
+            cmake_path(RELATIVE_PATH "file" BASE_DIRECTORY "${projectDir}" OUTPUT_VARIABLE fileRelative)
+            list(APPEND extraFiles "${fileRelative}")
         endforeach()
     endif()
 
@@ -172,8 +184,6 @@ function(execute_script args)
         ""
         ""
     )
-    #string(APPEND indexRstContent "\n" "" "\n")
-    #file(MAKE_DIRECTORY "${projectDir}/${buildDirRelative}/${currentFileNameNoExt}/${sourceDirRelative}")
     foreach(file IN LISTS "files")
         cmake_path(GET "file" PARENT_PATH fileDir)
         cmake_path(GET "file" FILENAME fileName)
@@ -185,6 +195,15 @@ function(execute_script args)
             string(APPEND indexRstContent "   ${fileDir}/${fileNameNoExt}" "\n")
             file(MAKE_DIRECTORY "${projectDir}/${buildDirRelative}/${currentFileNameNoExt}/${sourceDirRelative}/${fileDir}")
             file(COPY "${projectDir}/${sourceDirRelative}/${file}" DESTINATION "${projectDir}/${buildDirRelative}/${currentFileNameNoExt}/${sourceDirRelative}/${fileDir}")
+        endif()
+    endforeach()
+    foreach(file IN LISTS "extraFiles")
+        cmake_path(GET "file" PARENT_PATH fileDir)
+        if("${fileDir}" STREQUAL "")
+            file(COPY "${file}" DESTINATION "${projectDir}/${buildDirRelative}/${currentFileNameNoExt}")
+        else()
+            file(MAKE_DIRECTORY "${projectDir}/${buildDirRelative}/${currentFileNameNoExt}/${fileDir}")
+            file(COPY "${file}" DESTINATION "${projectDir}/${buildDirRelative}/${currentFileNameNoExt}/${fileDir}")
         endif()
     endforeach()
     file(WRITE "${projectDir}/${buildDirRelative}/${currentFileNameNoExt}/${sourceDirRelative}/index.rst" "${indexRstContent}")
@@ -219,8 +238,8 @@ function(execute_script args)
         if(NOT EXISTS "${projectDir}/${buildDirRelative}/doxygen/test/xml/index.xml")
             execute_process(
                 COMMAND "${CMAKE_COMMAND}" "-P" "cmake/run-doxygen.cmake" "--"
-                "SOURCE_DIR" "src/test/cpp"
-                "OUTPUT_DIR" "${buildDirRelative}/doxygen/test"
+                        "SOURCE_DIR" "src/test/cpp"
+                        "OUTPUT_DIR" "${buildDirRelative}/doxygen/test"
                 WORKING_DIRECTORY "${projectDir}"
                 COMMAND_ECHO "STDOUT"
                 COMMAND_ERROR_IS_FATAL "ANY"
