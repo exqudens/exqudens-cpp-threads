@@ -4,6 +4,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
 import os
+import xmltodict
 import mlx.traceability
 from pathlib import Path
 from datetime import datetime
@@ -16,7 +17,35 @@ project = Path(projectDir).joinpath('name-version.txt').read_text().split(':')[0
 copyright = '2023, exqudens'
 author = 'exqudens'
 release = Path(projectDir).joinpath('name-version.txt').read_text().split(':')[1].strip()
-rst_prolog = '.. |project| replace:: ' + project
+rst_prolog = '.. |project| replace:: ' + project + '\n\n'
+if str(os.getenv('PROJECT_TEST_REPORT_FILES')) != '':
+    for f in str(os.getenv('PROJECT_TEST_REPORT_FILES')).split(';'):
+        xmlEntry = xmltodict.parse(Path(f).read_text())
+        name = xmlEntry['testsuites']['testsuite']['@name']
+        name += '.'
+        name += xmlEntry['testsuites']['testsuite']['testcase']['@name']
+        timestamp = datetime.strptime(
+            xmlEntry['testsuites']['testsuite']['testcase']['@timestamp'],
+            '%Y-%m-%dT%H:%M:%S.%f'
+        )
+        timestampDate = '{}-{:02d}-{:02d}'.format(
+            timestamp.year,
+            timestamp.month,
+            timestamp.day
+        )
+        rst_prolog += '.. |' + name + '.date' + '| replace:: ' + timestampDate + '\n\n'
+        status = 'PASSED'
+        if (
+            int(xmlEntry['testsuites']['testsuite']['@failures']) > 0
+            or int(xmlEntry['testsuites']['testsuite']['@errors']) > 0
+        ):
+            status = 'FAILED'
+        if (
+                int(xmlEntry['testsuites']['testsuite']['@disabled']) > 0
+                or int(xmlEntry['testsuites']['testsuite']['@skipped']) > 0
+        ):
+            status = 'SKIPPED'
+        rst_prolog += '.. |' + name + '.status' + '| replace:: ' + status + '\n\n'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -61,7 +90,7 @@ html_static_path = [str(Path(mlx.traceability.__file__).parent.joinpath('assets'
 docx_documents = [
     (
         'index',
-        project + '.docx',
+        str(os.getenv('PROJECT_TITLE')).replace(' ', '_') + '.docx',
         {
             'title': project + ' documentation',
             'created': datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
@@ -78,7 +107,7 @@ docx_coverpage = False
 # https://rst2pdf.org/static/manual.html#sphinx
 
 pdf_documents = [
-    ('index', project, release, author)
+    ('index', str(os.getenv('PROJECT_TITLE')).replace(' ', '_'), release, author)
 ]
 pdf_use_toc = True
 pdf_use_coverpage = False

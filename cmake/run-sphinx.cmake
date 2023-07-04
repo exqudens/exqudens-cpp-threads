@@ -20,13 +20,18 @@ function(execute_script args)
     set(oneValueKeywords
         "VERBOSE"
         "SSL"
+        "WARNINGS_TO_ERRORS"
+        "TOCTREE_MAXDEPTH"
+        "TOCTREE_CAPTION"
         "SOURCE_DIR"
         "BUILD_DIR"
         "OUTPUT_DIR"
+        "TITLE"
     )
     set(multiValueKeywords
         "FILES"
         "EXTRA_FILES"
+        "TEST_REPORT_FILES"
         "BUILDERS"
     )
 
@@ -58,6 +63,28 @@ function(execute_script args)
         endif()
     endif()
 
+    if("${${currentFunctionName}_WARNINGS_TO_ERRORS}" STREQUAL "")
+        set(warningsToErrors "TRUE")
+    else()
+        if("${${currentFunctionName}_WARNINGS_TO_ERRORS}")
+            set(warningsToErrors "TRUE")
+        else()
+            set(warningsToErrors "FALSE")
+        endif()
+    endif()
+
+    if("${${currentFunctionName}_TOCTREE_MAXDEPTH}" STREQUAL "")
+        set(toctreeMaxdepth "2")
+    else()
+        set(toctreeMaxdepth "${${currentFunctionName}_TOCTREE_MAXDEPTH}")
+    endif()
+
+    if("${${currentFunctionName}_TOCTREE_CAPTION}" STREQUAL "")
+        set(toctreeCaption "Contents:")
+    else()
+        set(toctreeCaption "${${currentFunctionName}_TOCTREE_CAPTION}")
+    endif()
+
     if("${${currentFunctionName}_SOURCE_DIR}" STREQUAL "")
         set(sourceDirRelative "doc")
     else()
@@ -80,6 +107,14 @@ function(execute_script args)
         cmake_path(RELATIVE_PATH "${currentFunctionName}_OUTPUT_DIR" BASE_DIRECTORY "${projectDir}" OUTPUT_VARIABLE outputDirRelative)
         cmake_path(APPEND outputDirRelative "DIR")
         cmake_path(GET "outputDirRelative" PARENT_PATH outputDirRelative)
+    endif()
+
+    if("${${currentFunctionName}_TITLE}" STREQUAL "")
+        set(title "full")
+        string(REPLACE " " "_" titleFileName "${title}")
+    else()
+        set(title "${${currentFunctionName}_TITLE}")
+        string(REPLACE " " "_" titleFileName "${title}")
     endif()
 
     if("${${currentFunctionName}_BUILDERS}" STREQUAL "")
@@ -114,11 +149,13 @@ function(execute_script args)
     if("${${currentFunctionName}_EXTRA_FILES}" STREQUAL "")
         set(extraFiles "")
     else()
-        set(extraFiles "")
-        foreach(file IN LISTS "${currentFunctionName}_EXTRA_FILES")
-            cmake_path(RELATIVE_PATH "file" BASE_DIRECTORY "${projectDir}" OUTPUT_VARIABLE fileRelative)
-            list(APPEND extraFiles "${fileRelative}")
-        endforeach()
+        set(extraFiles "${${currentFunctionName}_EXTRA_FILES}")
+    endif()
+
+    if("${${currentFunctionName}_TEST_REPORT_FILES}" STREQUAL "")
+        set(testReportFiles "")
+    else()
+        set(testReportFiles "${${currentFunctionName}_TEST_REPORT_FILES}")
     endif()
 
     find_program(SPHINX_BUILD_COMMAND
@@ -179,8 +216,8 @@ function(execute_script args)
     endif()
     string(JOIN "\n" indexRstContent
         ".. toctree::"
-        "   :maxdepth: 2"
-        "   :caption: Contents:"
+        "   :maxdepth: ${toctreeMaxdepth}"
+        "   :caption: ${toctreeCaption}"
         ""
         ""
     )
@@ -190,24 +227,39 @@ function(execute_script args)
         cmake_path(GET "fileName" STEM fileNameNoExt)
         if("${fileDir}" STREQUAL "")
             string(APPEND indexRstContent "   ${fileNameNoExt}" "\n")
-            file(COPY "${projectDir}/${sourceDirRelative}/${file}" DESTINATION "${projectDir}/${buildDirRelative}/${currentFileNameNoExt}/${sourceDirRelative}")
+            file(COPY "${projectDir}/${sourceDirRelative}/${file}" DESTINATION "${projectDir}/${buildDirRelative}/${currentFileNameNoExt}/${sourceDirRelative}/${titleFileName}")
         else()
             string(APPEND indexRstContent "   ${fileDir}/${fileNameNoExt}" "\n")
-            file(MAKE_DIRECTORY "${projectDir}/${buildDirRelative}/${currentFileNameNoExt}/${sourceDirRelative}/${fileDir}")
-            file(COPY "${projectDir}/${sourceDirRelative}/${file}" DESTINATION "${projectDir}/${buildDirRelative}/${currentFileNameNoExt}/${sourceDirRelative}/${fileDir}")
+            file(MAKE_DIRECTORY "${projectDir}/${buildDirRelative}/${currentFileNameNoExt}/${sourceDirRelative}/${titleFileName}/${fileDir}")
+            file(COPY "${projectDir}/${sourceDirRelative}/${file}" DESTINATION "${projectDir}/${buildDirRelative}/${currentFileNameNoExt}/${sourceDirRelative}/${titleFileName}/${fileDir}")
         endif()
     endforeach()
     foreach(file IN LISTS "extraFiles")
-        cmake_path(GET "file" PARENT_PATH fileDir)
-        if("${fileDir}" STREQUAL "")
-            file(COPY "${file}" DESTINATION "${projectDir}/${buildDirRelative}/${currentFileNameNoExt}")
+
+        message("AAA file: '${file}'")
+
+        string(FIND "${file}" ">" delimiterIndex)
+        if("${delimiterIndex}" EQUAL "-1")
+            set(fileSrc "${projectDir}/${sourceDirRelative}/${file}")
+            set(fileDst "${file}")
         else()
-            file(MAKE_DIRECTORY "${projectDir}/${buildDirRelative}/${currentFileNameNoExt}/${fileDir}")
-            file(COPY "${file}" DESTINATION "${projectDir}/${buildDirRelative}/${currentFileNameNoExt}/${fileDir}")
+            string(REPLACE ">" ";" fileParts "${file}")
+            list(GET "fileParts" "0" fileSrc)
+            list(GET "fileParts" "1" fileDst)
+            cmake_path(RELATIVE_PATH "fileSrc" BASE_DIRECTORY "${projectDir}" OUTPUT_VARIABLE fileSrc)
         endif()
+
+        cmake_path(GET "fileDst" PARENT_PATH fileDir)
+        if("${fileDir}" STREQUAL "")
+            file(COPY "${fileSrc}" DESTINATION "${projectDir}/${buildDirRelative}/${currentFileNameNoExt}/${sourceDirRelative}/${titleFileName}")
+        else()
+            file(MAKE_DIRECTORY "${projectDir}/${buildDirRelative}/${currentFileNameNoExt}/${sourceDirRelative}/${titleFileName}/${fileDir}")
+            file(COPY "${fileSrc}" DESTINATION "${projectDir}/${buildDirRelative}/${currentFileNameNoExt}/${sourceDirRelative}/${titleFileName}/${fileDir}")
+        endif()
+
     endforeach()
-    file(WRITE "${projectDir}/${buildDirRelative}/${currentFileNameNoExt}/${sourceDirRelative}/index.rst" "${indexRstContent}")
-    file(COPY "${projectDir}/${sourceDirRelative}/conf.py" DESTINATION "${projectDir}/${buildDirRelative}/${currentFileNameNoExt}/${sourceDirRelative}")
+    file(WRITE "${projectDir}/${buildDirRelative}/${currentFileNameNoExt}/${sourceDirRelative}/${titleFileName}/index.rst" "${indexRstContent}")
+    file(COPY "${projectDir}/${sourceDirRelative}/conf.py" DESTINATION "${projectDir}/${buildDirRelative}/${currentFileNameNoExt}/${sourceDirRelative}/${titleFileName}")
 
     # run doxygen
     if(
@@ -254,20 +306,29 @@ function(execute_script args)
             message(STATUS "build ${builder}")
         endif()
         if(EXISTS "${projectDir}/${outputDirRelative}/${builder}")
-            file(REMOVE_RECURSE "${projectDir}/${outputDirRelative}/${builder}")
+            file(REMOVE_RECURSE "${projectDir}/${outputDirRelative}/${titleFileName}/${builder}")
         endif()
+        set(flags "")
+        if("${warningsToErrors}")
+            list(APPEND "flags" "-W")
+        endif()
+        list(APPEND "flags"
+            "-E"
+        )
         execute_process(
             COMMAND "${CMAKE_COMMAND}"
                     "-E"
                     "env"
                     "PROJECT_DIR=${projectDir}"
+                    "PROJECT_TITLE=${title}"
+                    "PROJECT_TEST_REPORT_FILES=${testReportFiles}"
                     "--"
                     "${SPHINX_BUILD_COMMAND}"
-                    "-E"
+                    ${flags}
                     "-b"
                     "${builder}"
-                    "${buildDirRelative}/${currentFileNameNoExt}/${sourceDirRelative}"
-                    "${outputDirRelative}/${builder}"
+                    "${buildDirRelative}/${currentFileNameNoExt}/${sourceDirRelative}/${titleFileName}"
+                    "${outputDirRelative}/${titleFileName}/${builder}"
             WORKING_DIRECTORY "${projectDir}"
             COMMAND_ECHO "STDOUT"
             COMMAND_ERROR_IS_FATAL "ANY"
