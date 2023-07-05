@@ -18,7 +18,7 @@ copyright = '2023, exqudens'
 author = 'exqudens'
 release = Path(projectDir).joinpath('name-version.txt').read_text().split(':')[1].strip()
 rst_prolog = '.. |project| replace:: ' + project + '\n\n'
-if str(os.getenv('PROJECT_TEST_REPORT_FILES')) != '':
+if str(os.getenv('PROJECT_TEST_REPORT_FILES')) != 'None':
     for f in str(os.getenv('PROJECT_TEST_REPORT_FILES')).split(';'):
         xmlEntry = xmltodict.parse(Path(f).read_text())
         name = xmlEntry['testsuites']['testsuite']['@name']

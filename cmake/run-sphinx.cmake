@@ -25,8 +25,8 @@ function(execute_script args)
         "TOCTREE_CAPTION"
         "SOURCE_DIR"
         "BUILD_DIR"
-        "OUTPUT_DIR"
         "TITLE"
+        "OUTPUT_DIR"
     )
     set(multiValueKeywords
         "FILES"
@@ -96,17 +96,9 @@ function(execute_script args)
     if("${${currentFunctionName}_BUILD_DIR}" STREQUAL "")
         set(buildDirRelative "build")
     else()
-        cmake_path(RELATIVE_PATH "${currentFunctionName}_BUILD_DIR" BASE_DIRECTORY "${projectDir}" OUTPUT_VARIABLE buildDirRelative)
+        set(buildDirRelative "${${currentFunctionName}_BUILD_DIR}")
         cmake_path(APPEND buildDirRelative "DIR")
         cmake_path(GET "buildDirRelative" PARENT_PATH buildDirRelative)
-    endif()
-
-    if("${${currentFunctionName}_OUTPUT_DIR}" STREQUAL "")
-        set(outputDirRelative "build/doc")
-    else()
-        cmake_path(RELATIVE_PATH "${currentFunctionName}_OUTPUT_DIR" BASE_DIRECTORY "${projectDir}" OUTPUT_VARIABLE outputDirRelative)
-        cmake_path(APPEND outputDirRelative "DIR")
-        cmake_path(GET "outputDirRelative" PARENT_PATH outputDirRelative)
     endif()
 
     if("${${currentFunctionName}_TITLE}" STREQUAL "")
@@ -115,6 +107,14 @@ function(execute_script args)
     else()
         set(title "${${currentFunctionName}_TITLE}")
         string(REPLACE " " "_" titleFileName "${title}")
+    endif()
+
+    if("${${currentFunctionName}_OUTPUT_DIR}" STREQUAL "")
+        set(outputDirRelative "build/doc/${titleFileName}")
+    else()
+        set(outputDirRelative "${${currentFunctionName}_OUTPUT_DIR}")
+        cmake_path(APPEND outputDirRelative "DIR")
+        cmake_path(GET "outputDirRelative" PARENT_PATH outputDirRelative)
     endif()
 
     if("${${currentFunctionName}_BUILDERS}" STREQUAL "")
@@ -135,14 +135,10 @@ function(execute_script args)
     else()
         set(files "")
         foreach(file IN LISTS "${currentFunctionName}_FILES")
-            cmake_path(GET "file" PARENT_PATH fileDir)
-            cmake_path(RELATIVE_PATH "fileDir" BASE_DIRECTORY "${sourceDirRelative}" OUTPUT_VARIABLE fileDir)
-            cmake_path(GET "file" FILENAME fileName)
-            if("${fileDir}" STREQUAL "")
-                list(APPEND files "${fileName}")
-            else()
-                list(APPEND files "${fileDir}/${fileName}")
-            endif()
+            set(fileRelative "${file}")
+            cmake_path(APPEND fileRelative "DIR")
+            cmake_path(GET "fileRelative" PARENT_PATH fileRelative)
+            list(APPEND files "${fileRelative}")
         endforeach()
     endif()
 
@@ -153,7 +149,7 @@ function(execute_script args)
     endif()
 
     if("${${currentFunctionName}_TEST_REPORT_FILES}" STREQUAL "")
-        set(testReportFiles "")
+        set(testReportFiles "None")
     else()
         set(testReportFiles "${${currentFunctionName}_TEST_REPORT_FILES}")
     endif()
@@ -211,8 +207,8 @@ function(execute_script args)
     if("${verbose}")
         message(STATUS "create structure")
     endif()
-    if(EXISTS "${projectDir}/${buildDirRelative}/${currentFileNameNoExt}/${sourceDirRelative}")
-        file(REMOVE_RECURSE "${projectDir}/${buildDirRelative}/${currentFileNameNoExt}/${sourceDirRelative}")
+    if(EXISTS "${projectDir}/${buildDirRelative}/${currentFileNameNoExt}/${sourceDirRelative}/${titleFileName}")
+        file(REMOVE_RECURSE "${projectDir}/${buildDirRelative}/${currentFileNameNoExt}/${sourceDirRelative}/${titleFileName}")
     endif()
     string(JOIN "\n" indexRstContent
         ".. toctree::"
@@ -235,9 +231,6 @@ function(execute_script args)
         endif()
     endforeach()
     foreach(file IN LISTS "extraFiles")
-
-        message("AAA file: '${file}'")
-
         string(FIND "${file}" ">" delimiterIndex)
         if("${delimiterIndex}" EQUAL "-1")
             set(fileSrc "${projectDir}/${sourceDirRelative}/${file}")
@@ -306,7 +299,7 @@ function(execute_script args)
             message(STATUS "build ${builder}")
         endif()
         if(EXISTS "${projectDir}/${outputDirRelative}/${builder}")
-            file(REMOVE_RECURSE "${projectDir}/${outputDirRelative}/${titleFileName}/${builder}")
+            file(REMOVE_RECURSE "${projectDir}/${outputDirRelative}/${builder}")
         endif()
         set(flags "")
         if("${warningsToErrors}")
@@ -328,7 +321,7 @@ function(execute_script args)
                     "-b"
                     "${builder}"
                     "${buildDirRelative}/${currentFileNameNoExt}/${sourceDirRelative}/${titleFileName}"
-                    "${outputDirRelative}/${titleFileName}/${builder}"
+                    "${outputDirRelative}/${builder}"
             WORKING_DIRECTORY "${projectDir}"
             COMMAND_ECHO "STDOUT"
             COMMAND_ERROR_IS_FATAL "ANY"
