@@ -4,8 +4,9 @@ pipeline {
         stage('Clone') {
             steps {
                 git(
-                    credentialsId: 'github-token',
-                    url: 'https://github.com/exqudens/exqudens-cpp-threads.git'
+                    url: 'https://github.com/exqudens/exqudens-cpp-threads.git',
+                    branch: env.BRANCH_NAME,
+                    credentialsId: 'github-token'
                 )
             }
         }
