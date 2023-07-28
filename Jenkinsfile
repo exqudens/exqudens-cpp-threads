@@ -12,7 +12,11 @@ pipeline {
         stage('Configure') {
             steps {
                 script {
-                    def presets = bat(script: 'cmake --list-presets', returnStdout: true).tokenize(':')[1].trim().tokenize('\n').collect { it.trim().replace('"', '') }
+                    def presets = bat(script: 'cmake --list-presets', returnStdout: true)
+                        .split('Available configure presets:')[1]
+                        .trim()
+                        .tokenize('\n')
+                        .collect { it.trim().replace('"', '') }
                     for (preset in presets) {
                         def script = [
                             'cmake',
@@ -27,7 +31,11 @@ pipeline {
         stage('Build') {
             steps {
                 script {
-                    def presets = bat(script: 'cmake --list-presets', returnStdout: true).tokenize(':')[1].trim().tokenize('\n').collect { it.trim().replace('"', '') }
+                    def presets = bat(script: 'cmake --list-presets', returnStdout: true)
+                        .split('Available configure presets:')[1]
+                        .trim()
+                        .tokenize('\n')
+                        .collect { it.trim().replace('"', '') }
                     for (preset in presets) {
                         def script = [
                             'cmake',
