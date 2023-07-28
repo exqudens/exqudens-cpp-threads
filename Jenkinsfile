@@ -9,13 +9,36 @@ pipeline {
                 )
             }
         }
+        stage('Configure') {
+            steps {
+                script {
+                    def presets = bat(script: 'cmake --list-presets', returnStdout: true).tokenize(':')[1].trim().tokenize('\n').collect { it.trim().replace('"', '') }
+                    for (preset in presets) {
+                        def script = [
+                            'cmake',
+                            '--preset',
+                            '"' + preset + '"'
+                        ].join(' ')
+                        bat(script: script)
+                    }
+                }
+            }
+        }
         stage('Build') {
             steps {
                 script {
-                    def s = bat(script: 'dir', returnStdout: true)
-                    echo("---")
-                    echo("s: '${s}'")
-                    echo("---")
+                    def presets = bat(script: 'cmake --list-presets', returnStdout: true).tokenize(':')[1].trim().tokenize('\n').collect { it.trim().replace('"', '') }
+                    for (preset in presets) {
+                        def script = [
+                            'cmake',
+                            '--build',
+                            '--preset',
+                            '"' + preset + '"',
+                            '--target',
+                            'conan-export'
+                        ].join(' ')
+                        bat(script: script)
+                    }
                 }
             }
         }
