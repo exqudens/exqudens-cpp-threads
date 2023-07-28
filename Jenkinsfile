@@ -9,6 +9,16 @@ pipeline {
                 )
             }
         }
+        stage('Build') {
+            steps {
+                script {
+                    def s = bat(script: 'dir', returnStdout: true)
+                    echo("---")
+                    echo("s: '${s}'")
+                    echo("---")
+                }
+            }
+        }
     }
     post {
         cleanup {
