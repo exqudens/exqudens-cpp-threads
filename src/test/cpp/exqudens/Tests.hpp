@@ -108,7 +108,7 @@ namespace exqudens {
     } catch (const std::exception& e) {
       std::vector<std::string> errorMessages = TestUtils::toStringVector(e);
       ASSERT_EQ(2, errorMessages.size());
-      ASSERT_NE(std::string::npos, errorMessages.at(1).find("'threadSize' is zero"));
+      ASSERT_NE(std::string::npos, errorMessages.at(1).find("'size' is zero"));
     } catch (...) {
       FAIL() << "'std::exception' is not thrown";
     }
