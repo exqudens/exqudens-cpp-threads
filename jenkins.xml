@@ -1,0 +1,13 @@
+<service>
+  <id>jenkins</id>
+  <name>Jenkins</name>
+  <description>This service runs Jenkins continuous integration system.</description>
+  <executable>jdk-17.0.2\bin\java.exe</executable>
+  <arguments>-Xrs -Xmx256m -jar "jenkins-2.401.2-lts.war" --httpPort=8080</arguments>
+  <log mode="roll"></log>
+  <serviceaccount>
+    <!--<domain>WORKGROUP</domain>-->
+    <user>exqudens</user>
+    <allowservicelogon>true</allowservicelogon>
+  </serviceaccount>
+</service>

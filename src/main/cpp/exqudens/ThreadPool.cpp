@@ -3,7 +3,7 @@
 namespace exqudens {
 
   ThreadPool::ThreadPool(): ThreadPool(
-      std::thread::hardware_concurrency()
+      std::thread::hardware_concurrency() > 1 ? std::thread::hardware_concurrency() - 1 : 1
   ) {
   }
 
@@ -13,36 +13,43 @@ namespace exqudens {
   ) {
   }
 
-  ThreadPool::ThreadPool(size_t queueSize, size_t threadSize):
+  ThreadPool::ThreadPool(size_t queueSize, size_t size):
       queueSize(queueSize),
       stop(false)
   {
     try {
       if (queueSize == 0) {
-        throw std::invalid_argument(CALL_INFO() + ": 'queueSize' is zero");
+        throw std::invalid_argument(std::string(__FUNCTION__) + "(" + __FILE__ + ":" + std::to_string(__LINE__) + "): 'queueSize' is zero");
       }
-      if (threadSize == 0) {
-        throw std::invalid_argument(CALL_INFO() + ": 'threadSize' is zero");
+      if (size == 0) {
+        throw std::invalid_argument(std::string(__FUNCTION__) + "(" + __FILE__ + ":" + std::to_string(__LINE__) + "): 'size' is zero");
       }
-      for(size_t i = 0; i < threadSize; i++) {
-        threads.emplace_back([this]{
-          while(true) {
-            std::function<void()> task;
-            {
-              std::unique_lock<std::mutex> lock(this->mutex);
-              this->condition.wait(lock, [this]{ return this->stop || !this->queue.empty(); });
-              if(this->stop && this->queue.empty()) {
-                return;
+      for(size_t i = 0; i < size; i++) {
+        threads.emplace_back(
+            [this] {
+              while(true) {
+                std::function<void()> task;
+                {
+                  std::unique_lock<std::mutex> lock(this->mutex);
+                  this->condition.wait(
+                      lock,
+                      [this] {
+                        return this->stop || !this->queue.empty();
+                      }
+                  );
+                  if(this->stop && this->queue.empty()) {
+                    return;
+                  }
+                  task = std::move(this->queue.front());
+                  this->queue.pop();
+                }
+                task();
               }
-              task = std::move(this->queue.front());
-              this->queue.pop();
             }
-            task();
-          }
-        });
+        );
       }
     } catch (...) {
-      std::throw_with_nested(std::runtime_error(CALL_INFO()));
+      std::throw_with_nested(std::runtime_error(std::string(__FUNCTION__) + "(" + __FILE__ + ":" + std::to_string(__LINE__) + ")"));
     }
   }
 
@@ -52,7 +59,7 @@ namespace exqudens {
       stop = true;
     }
     condition.notify_all();
-    for(std::thread& thread : threads) {
+    for (std::thread& thread : threads) {
       thread.join();
     }
   }

@@ -7,7 +7,7 @@ block()
         file(DOWNLOAD
             "https://raw.githubusercontent.com/exqudens/exqudens-cmake/master/src/main/cmake/${fileName}"
             "${CMAKE_CURRENT_BINARY_DIR}/tmp/${fileName}"
-            EXPECTED_MD5 "39b926a55f3934600e31fea9cbc9175a"
+            EXPECTED_MD5 "3db5a119eb1167ae992e88a4ca554079"
             STATUS downloadStatus
         )
         if("${downloadStatus}" STREQUAL "0;\"No error\"")
@@ -208,6 +208,7 @@ foreach(
         list(APPEND NOT_FOUND_PACKAGE_NAMES "${cmakePackageName}")
         find_package("${cmakePackageName}" "${cmakePackageVersion}" EXACT QUIET CONFIG)
     else()
+        file(REMOVE "${CONAN_INSTALL_PREFIX}/Find${cmakePackageName}.cmake")
         list(APPEND NOT_FOUND_PACKAGE_NAMES "${cmakePackageName}")
         find_package("${cmakePackageName}" "${cmakePackageVersion}" EXACT QUIET CONFIG)
     endif()
@@ -226,18 +227,17 @@ if("${INTERFACE_ONLY}")
         SRC_DIRECTORY "${PROJECT_SOURCE_DIR}"
         SRC_BASE_DIRECTORY "${PROJECT_SOURCE_DIR}/src/main/cpp"
         DST_BASE_DIRECTORY "${PROJECT_BINARY_DIR}/generated/src/main/cpp"
-        HEADER_FILES_EXPRESSION "**/*.hpp"
-        SOURCE_FILES_EXPRESSION "**/*.cpp"
+        HEADER_FILES_EXPRESSIONS "**/*.hpp"
+        SOURCE_FILES_EXPRESSIONS "**/*.cpp"
     )
-
     add_library("${PROJECT_NAME}" INTERFACE
         ${GENERATED_SOURCES}
     )
     file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/generated/src/main/cpp/exqudens")
-    string(CONCAT EXQUDENS_THREADS_INTERFACE_INLINE_CONTENT
-        "#ifndef EXQUDENS_THREADS_INTERFACE_INLINE\n"
-        "#  define EXQUDENS_THREADS_INTERFACE_INLINE inline\n"
-        "#endif /* EXQUDENS_THREADS_INTERFACE_INLINE */\n"
+    string(CONCAT EXQUDENS_THREADS_FUNCTION_ATTRIBUTES_CONTENT
+        "#ifndef EXQUDENS_THREADS_FUNCTION_ATTRIBUTES\n"
+        "#  define EXQUDENS_THREADS_FUNCTION_ATTRIBUTES inline\n"
+        "#endif /* EXQUDENS_THREADS_FUNCTION_ATTRIBUTES */\n"
     )
     file(WRITE "${PROJECT_BINARY_DIR}/generated/src/main/cpp/exqudens/ThreadsExport.hpp"
         "#ifndef EXQUDENS_THREADS_EXPORT_H\n"
@@ -247,7 +247,7 @@ if("${INTERFACE_ONLY}")
         "#  define EXQUDENS_THREADS_EXPORT\n"
         "#endif /* EXQUDENS_THREADS_EXPORT */\n"
         "\n"
-        "${EXQUDENS_THREADS_INTERFACE_INLINE_CONTENT}"
+        "${EXQUDENS_THREADS_FUNCTION_ATTRIBUTES_CONTENT}"
         "\n"
         "#endif /* EXQUDENS_THREADS_EXPORT_H */\n"
     )
@@ -257,19 +257,18 @@ if("${INTERFACE_ONLY}")
     )
 else()
     add_library("${PROJECT_NAME}"
-        "src/main/cpp/exqudens/Macros.hpp"
         "src/main/cpp/exqudens/ThreadPool.hpp"
         "src/main/cpp/exqudens/ThreadPool.cpp"
     )
-    string(CONCAT EXQUDENS_THREADS_INTERFACE_INLINE_CONTENT
-        "#ifndef EXQUDENS_THREADS_INTERFACE_INLINE\n"
-        "#  define EXQUDENS_THREADS_INTERFACE_INLINE inline\n"
-        "#endif /* EXQUDENS_THREADS_INTERFACE_INLINE */\n"
+    string(CONCAT EXQUDENS_THREADS_FUNCTION_ATTRIBUTES_CONTENT
+        "#ifndef EXQUDENS_THREADS_FUNCTION_ATTRIBUTES\n"
+        "#  define EXQUDENS_THREADS_FUNCTION_ATTRIBUTES\n"
+        "#endif /* EXQUDENS_THREADS_FUNCTION_ATTRIBUTES */\n"
     )
     generate_export_header("${PROJECT_NAME}"
         BASE_NAME "EXQUDENS_THREADS"
         EXPORT_FILE_NAME "generated/src/main/cpp/exqudens/ThreadsExport.hpp"
-        CUSTOM_CONTENT_FROM_VARIABLE "EXQUDENS_THREADS_INTERFACE_INLINE_CONTENT"
+        CUSTOM_CONTENT_FROM_VARIABLE "EXQUDENS_THREADS_FUNCTION_ATTRIBUTES_CONTENT"
     )
     if(NOT "${BUILD_SHARED_LIBS}")
         set_target_properties("${PROJECT_NAME}" PROPERTIES COMPILE_FLAGS -DEXQUDENS_THREADS_STATIC_DEFINE)
